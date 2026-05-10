@@ -23,34 +23,57 @@ def setup_database():
     return count
 
 class SQLTools:
-    """SQL execution tools for querying the trips database."""
+    """
+    SQL execution tools for querying the trips database.
+    """
     
-    def __init__(self, connection=None):
-        """Initialize with a DuckDB connection."""
+    def __init__(
+        self,
+        connection=None
+    ) -> None:
+        """
+        Initialize the SQLTools instance.
+
+        Args:
+            connection: Optional database connection. If None, a new connection 
+            to 'taxi.db' will be created
+        """
         self.con = connection or con
+
     
-    def get_schema(self):
-        """Get schema information for the trips table."""
+    def get_schema(self) -> str:
+        """
+        Get schema information for the trips table.
+        
+        Returns:
+            A formatted string with the columns and their types in the trips table.
+        """
         result = self.con.execute("DESCRIBE trips").fetchall()
         schema_info = []
+
         for row in result:
             col_name, col_type = row[0], row[1]
             schema_info.append(f"{col_name}: {col_type}")
+
         return "\n".join(schema_info)
     
-    def run_sql(self, query):
-        """Execute a SQL query and return results as formatted text."""
+    def run_sql(self, query: str) -> str:
+        """
+        Execute a SQL query and return results as formatted text.
+        Args:
+            query: The SQL query to execute.
+        Returns:
+            A formatted string of the query results, limited to 50 rows.
+        """
+        
         result = self.con.execute(query).fetchall()
         columns = [desc[0] for desc in self.con.description]
         
-        # Limit to 50 rows
         result = result[:50]
         
-        # Format header
         lines = [" | ".join(columns)]
         lines.append("-" * len(lines[0]))
         
-        # Format data rows
         for row in result:
             lines.append(" | ".join(str(val) for val in row))
         
