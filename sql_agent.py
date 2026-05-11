@@ -45,7 +45,8 @@ def create_agent(
         name=config.name,
         model=config.model,
         instructions=config.instructions,
-        tools=tools
+        tools=tools,
+        output_type=SQLResult
     )
     return sql_agent
 
@@ -65,6 +66,28 @@ class NamedCallback:
             args = event.part.args
             print(f"TOOL CALL ({self.agent_name}): {tool_name}({args})")
 
+    async def __call__(self, ctx, event):
+        return await self.print_function_calls(ctx, event)
+
+
+async def run_agent(
+        agent: Agent,
+        user_prompt: str,
+        message_history=None
+    ) -> AgentRunResult:
+    callback = NamedCallback(agent)
+
+    if message_history is None:
+        message_history = []
+
+    result = await agent.run(
+        user_prompt,
+        event_stream_handler=callback,
+        message_history=message_history,
+        output_type=SQLResult
+    )
+
+    return result
 
 class SQLResponseHandler(JSONParserHandler):
     def on_object_field_end(self, path: str, field_name: str, value: Any = None) -> None:
@@ -101,7 +124,8 @@ class AgentStreamRunner:
             message_history = []
         async with self.agent.iter(
             user_prompt,
-            message_history=message_history
+            message_history=message_history,
+            output_type=SQLResult
         ) as agent_run:
             async for node in agent_run:
                 if isinstance(node, UserPromptNode):
@@ -142,6 +166,3 @@ class AgentStreamRunner:
 
 # Initialize SQLTools instance
 sql_tools_instance = sql_tools.SQLTools()
-
-# Create agent with default config
-agent = create_agent(SQLAgentConfig(), sql_tools_instance)
